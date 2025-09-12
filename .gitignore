@@ -11,9 +11,6 @@ pubspec.lock
 # If you don't generate documentation locally you can remove this line.
 doc/api/
 
-# dotenv environment variables file
-.env*
-
 # Avoid committing generated Javascript files:
 *.dart.js
 # Produced by the --dump-info flag.
@@ -27,3 +24,52 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# ===========================
+# Flutter / Dart
+# ===========================
+.pub/
+flutter_*.png
+*.lock
+*.log
+
+# ===========================
+# IDEs / Editors
+# ===========================
+.idea/
+.vscode/
+*.iml
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Thumbs.db
+
+# ===========================
+# Sensitive Data (Password Manager specific)
+# ===========================
+# SQLite / SQLCipher DBs
+*.db
+*.sqlite
+*.db-journal
+*.sqlcipher
+
+# Vault exports / backups
+*.vault
+*.bin
+*.backup
+*.export
+*.json
+
+# Environment / secrets
+.env
+.env.*
+*.secrets.json
+*.keys.json
+*.keystore
+*.jks
+*.p12
+
+# Secure storage files (if any)
+secure_storage/
