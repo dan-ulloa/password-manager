@@ -49,7 +49,7 @@ class AuthService {
       return false;
     }
   }
-  
+
   Future<void> logout() async {
     await _keyService.reset();
   }

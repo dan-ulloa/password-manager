@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
 import '../services/key_service.dart';
 
@@ -8,7 +9,7 @@ class CryptoService {
   CryptoService(this._keyService);
 
   /// Cifra texto plano con AES-GCM usando una subkey
-  Future<String> encrypt(String plainText) async {
+  Future<Uint8List> encrypt(String plainText) async {
     final subkey = await _keyService.deriveSubkey(
       subkeyId: 1,
       subkeyLength: 32,
@@ -29,12 +30,16 @@ class CryptoService {
       nonce: nonce,
     );
 
-    // Guardamos ciphertext + nonce en Base64
-    return base64Encode(nonce + encrypted.cipherText + encrypted.mac.bytes);
+    // Construimos el paquete: [nonce | ciphertext | mac]
+    final result = Uint8List.fromList(
+      nonce + encrypted.cipherText + encrypted.mac.bytes,
+    );
+
+    return result;
   }
 
   /// Descifra texto cifrado en Base64
-  Future<String> decrypt(String encryptedBase64) async {
+  Future<String> decrypt(Uint8List encryptedBlob) async {
     final subkey = await _keyService.deriveSubkey(
       subkeyId: 1,
       subkeyLength: 32,
@@ -45,18 +50,21 @@ class CryptoService {
       throw Exception("No hay master key inicializada");
     }
 
-    final raw = base64Decode(encryptedBase64);
     final algorithm = AesGcm.with256bits();
     final secretKey = SecretKey(subkey);
+    
+    // Separar nonce, ciphertext y mac
+    final nonceLength = algorithm.nonceLength;
+    final macLength = 16; // AES-GCM usa 16 bytes por defecto
 
-    final nonce = raw.sublist(0, 12);
-    final cipherText = raw.sublist(12, raw.length - 16);
-    final macBytes = raw.sublist(raw.length - 16);
+    final nonce = encryptedBlob.sublist(0, nonceLength);
+    final cipherText = encryptedBlob.sublist(nonceLength, encryptedBlob.length - macLength);
+    final mac = Mac(encryptedBlob.sublist(encryptedBlob.length - macLength));
 
     final secretBox = SecretBox(
       cipherText,
       nonce: nonce,
-      mac: Mac(macBytes),
+      mac: mac,
     );
 
     final decrypted = await algorithm.decrypt(secretBox, secretKey: secretKey);

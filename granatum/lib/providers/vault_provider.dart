@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
 import '../models/password_entry.dart';
 import '../repositories/password_repository.dart';
+import '../services/crypto_service.dart';
 
 class VaultProvider extends ChangeNotifier {
-  PasswordRepository? _repo;
+  late PasswordRepository? _repo;
+  late CryptoService _cryptoService;
 
   // Estado público
   List<PasswordEntry> entries = [];
-  Map<String, bool> visibleMap = {}; // id -> mostrar/ocultar contraseña
   bool loading = false;
   String? error;
+  
+  String? _revealedPassword;
+  int? _revealedId;
+
+  String? get revealedPassword => _revealedPassword;
+  int? get revealedId => _revealedId;
 
   VaultProvider();
 
-  // Método usado por ChangeNotifierProxyProvider para inyectar repo
-  void setRepository(PasswordRepository repo) {
+  void setDependencies(PasswordRepository repo, CryptoService cryptoService) {
+    _cryptoService = cryptoService;
+    
     // Solo inicializar una vez para evitar recargas innecesarias
     final firstSet = _repo == null;
     _repo = repo;
@@ -31,12 +39,9 @@ class VaultProvider extends ChangeNotifier {
 
     try {
       entries = await _repo!.getEntries();
-      // Inicializar mapa de visibilidad
-      visibleMap = { for (var e in entries) e.id : false };
     } catch (e) {
       error = 'Error cargando entradas: $e';
       entries = [];
-      visibleMap = {};
     } finally {
       loading = false;
       notifyListeners();
@@ -50,11 +55,12 @@ class VaultProvider extends ChangeNotifier {
   }) async {
     if (_repo == null) throw Exception('Repositorio no inicializado');
 
+    final encrypted = await _cryptoService.encrypt(password);
+
     final newEntry = PasswordEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
       username: username,
-      password: password,
+      password: encrypted,
     );
 
     loading = true;
@@ -70,14 +76,13 @@ class VaultProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> deleteEntry(String id) async {
+  Future<void> deleteEntry(int id) async {
     if (_repo == null) return;
     loading = true;
     notifyListeners();
     try {
       await _repo!.deleteEntry(id);
       entries.removeWhere((e) => e.id == id);
-      visibleMap.remove(id);
     } catch (e) {
       error = 'Error eliminando entrada: $e';
     } finally {
@@ -86,12 +91,45 @@ class VaultProvider extends ChangeNotifier {
     }
   }
 
-  void toggleVisibility(String id) {
-    visibleMap[id] = !(isVisible(id));
+  /// Revelar una contraseña (solo una a la vez)
+  Future<void> revealPassword(int id) async {
+    // Si ya hay otra revelada, la ocultamos
+    _revealedPassword = null;
+    _revealedId = null;
     notifyListeners();
+    
+    try{
+      // Buscamos la entrada
+      final entry = await _repo!.getEntryById(id);
+      final plain = await _cryptoService.decrypt(entry.password);
+      
+      _revealedPassword = plain;
+      _revealedId = id;
+      notifyListeners();
+
+      // Auto-ocultar después de 10s
+      Future.delayed(const Duration(seconds: 10), () {
+        if (_revealedId == id) {
+          _revealedPassword = null;
+          _revealedId = null;
+          notifyListeners();
+        }
+      });
+
+    } catch (e) {
+      _revealedPassword = null;
+      _revealedId = null;
+      notifyListeners();
+
+      error = 'Error al revelar contraseña: $e';
+      debugPrint('Error al revelar contraseña: $e');
+    }
   }
 
-  
-
-  bool isVisible(String id) => visibleMap[id] ?? false;
+  /// Ocultar manualmente
+  void hidePassword() {
+    _revealedPassword = null;
+    _revealedId = null;
+    notifyListeners();
+  }
 }

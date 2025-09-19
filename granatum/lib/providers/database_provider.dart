@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:path/path.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart';
@@ -8,6 +9,7 @@ import '../services/key_service.dart';
 class DatabaseProvider {
   Database? _db;
   final KeyService _keyService;
+  final String dbName = "vault.db";
 
   DatabaseProvider(this._keyService);
 
@@ -16,8 +18,12 @@ class DatabaseProvider {
     return await initDB();
   }
 
-
   Future<Database> initDB() async {
+    // Limpia el secure storage si la DB no existe
+    validateStorage();
+
+    final dbPath = join(await getDatabasesPath(), dbName);
+
     // Generar subkey para la DB a partir de la Master Key
     final dbKey = await _keyService.deriveSubkey(
       subkeyId: 99,
@@ -29,15 +35,33 @@ class DatabaseProvider {
       throw Exception("Master key no inicializada. Autorización requerida");
     }
 
-    final path = join(await getDatabasesPath(), 'vault.db');
-    
     return await openDatabase(
-      path,
+      dbPath,
       password: base64Encode(dbKey), // clave en base64 como passphrase
       version: 1,
-      onCreate: _onCreate,  
-      onUpgrade: _onUpgrade
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
+  }
+
+  Future<bool> dbExists() async {
+    final dbPath = join(await getDatabasesPath(), dbName);
+    final dbFile = File(dbPath);
+
+    return await dbFile.exists();
+  }
+
+  Future<void> validateStorage() async {
+    final databaseExists = await dbExists();
+    final saltExists = await _keyService.saltExists();
+
+    if (databaseExists && !saltExists || !databaseExists && saltExists) {
+      // “No se detectó la bóveda, se requiere registro inicial”.
+      // “Bóveda corrupta o sin inicializar, se requiere registro de nuevo”.
+      // la DB ya no existe pero la llave sí.
+      // "Inconsistencia detectada: eliminando master key..."
+      await _keyService.reset();
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -54,15 +78,14 @@ class DatabaseProvider {
     await db.execute('''
       CREATE TABLE passwords (
         id INTEGER PRIMARY KEY,
-        service TEXT NOT NULL,
+        title TEXT NOT NULL,
         username TEXT NOT NULL,
-        password BLOB NOT NULL,
-        iv BLOB NOT NULL
+        password BLOB NOT NULL
       )
     ''');
   }
 
-   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Ejecutar migraciones si agregas nuevas tablas o columnas
   }
 }

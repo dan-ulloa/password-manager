@@ -6,10 +6,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class KeyService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  
-  static const _masterKeyId = 'master_key';
   static const _saltId = 'pwhash_salt';
-  
+
+  Future<bool> saltExists() async {
+    String? saltBase64 = await _storage.read(key: _saltId);
+    return saltBase64 != null && saltBase64.isNotEmpty;
+  }
+
   Future<Uint8List> deriveMasterKey(String masterPassword) async {
     String? saltBase64 = await _storage.read(key: _saltId);
     late Uint8List salt;
@@ -21,7 +24,7 @@ class KeyService {
     } else {
       salt = Uint8List.fromList(base64Decode(saltBase64));
     }
-    
+
     // minimum configuration
     final argon2id = Argon2id(
       parallelism: 1,
@@ -41,9 +44,12 @@ class KeyService {
   }
 
   Future<Uint8List?> getMasterKey() async {
+    return null;
+    /*
     final keyBase64 = await _storage.read(key: _masterKeyId);
     if (keyBase64 == null) return null;
     return Uint8List.fromList(base64Decode(keyBase64));
+    */
   }
 
   Future<Uint8List?> deriveSubkey({
@@ -64,7 +70,6 @@ class KeyService {
   }
 
   Future<void> reset() async {
-    await _storage.delete(key: _masterKeyId);
     await _storage.delete(key: _saltId);
   }
 }

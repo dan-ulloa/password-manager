@@ -96,22 +96,32 @@ class _VaultPageState extends State<VaultPage> {
                       : ListView.builder(
                           itemCount: provider.entries.length,
                           itemBuilder: (_, i) {
-                            final PasswordEntry e = provider.entries[i];
-                            final visible = provider.isVisible(e.id);
+                            final PasswordEntry entry = provider.entries[i];
+                            final isRevealed = provider.revealedId == entry.id;
+
                             return ListTile(
-                              title: Text(e.title),
-                              subtitle: Text('${e.username}\n' + (visible ? e.password : '••••••••')),
+                              title: Text(entry.title),
+                              subtitle: Text(
+                                isRevealed ? provider.revealedPassword! : "********",
+                                style: const TextStyle(fontSize: 16),
+                              ),
                               isThreeLine: true,
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: Icon(visible ? Icons.visibility_off : Icons.visibility),
-                                    onPressed: () => provider.toggleVisibility(e.id),
+                                    icon: Icon(isRevealed ? Icons.visibility_off : Icons.visibility),
+                                    onPressed: () {
+                                      if (isRevealed) {
+                                        provider.hidePassword();
+                                      } else {
+                                        provider.revealPassword(entry.id!);
+                                      }
+                                    },
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.delete),
-                                    onPressed: () => _confirmDelete(context, provider, e.id),
+                                    onPressed: () => _confirmDelete(context, provider, entry.id!),
                                   ),
                                 ],
                               ),
@@ -128,7 +138,7 @@ class _VaultPageState extends State<VaultPage> {
     );
   }
 
-  void _confirmDelete(BuildContext context, VaultProvider provider, String id) {
+  void _confirmDelete(BuildContext context, VaultProvider provider, int id) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
