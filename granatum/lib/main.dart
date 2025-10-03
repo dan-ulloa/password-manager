@@ -54,8 +54,8 @@ class MyApp extends StatelessWidget {
 
   Future<bool> _checkIfRegistered(context) async {
     final _dbProvider = Provider.of<DatabaseProvider>(context, listen: false);
-    final _keyService = Provider.of<KeyService>(context, listen: false);
-    return await _dbProvider.dbExists() && await _keyService.saltExists();
+    // Queda pendiente validar con el AuthService que exista la salt id
+    return await _dbProvider.dbExists();
   }
 
   @override

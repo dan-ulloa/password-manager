@@ -4,7 +4,7 @@ import '../services/auth_service.dart';
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   bool _authenticated = false;
-  
+
   bool get authenticated => _authenticated;
 
   Future<void> login(String password) async {
@@ -24,9 +24,9 @@ class AuthProvider extends ChangeNotifier {
     _authenticated = true;
     notifyListeners();
   }
-  
+
   Future<void> logout() async {
-    await _authService.logout();
+    //await _authService.logout();
     _authenticated = false;
     notifyListeners();
   }
