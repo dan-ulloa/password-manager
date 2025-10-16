@@ -6,7 +6,7 @@ class PasswordRepository {
   final DatabaseProvider _dbProvider;
 
   PasswordRepository(this._dbProvider);
-  
+
   Future<void> addEntry(PasswordEntry entry) async {
     final db = await _dbProvider.database;
     final id = await db.insert('passwords', entry.toMap());
@@ -31,10 +31,9 @@ class PasswordRepository {
     if (result.isEmpty) {
       throw Exception('No se encontró la entrada con id $id');
     }
-    
+
     return PasswordEntry.fromMap(result.first);
   }
-
 
   Future<void> deleteEntry(int id) async {
     final db = await _dbProvider.database;

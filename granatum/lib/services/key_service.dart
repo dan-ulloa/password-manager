@@ -1,38 +1,34 @@
 import 'dart:typed_data';
-import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
-import 'package:cryptography/helpers.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class KeyService {
+  /// Deriva la master key a partir de la contraseña del usuario y un salt único.
+  /// - password: contraseña en texto plano ingresada por el usuario.
+  /// - salt: valor aleatorio (16-32 bytes) guardado en SecureStorage.
+  /// Devuelve una clave binaria de 32 bytes (Uint8List).
   Future<Uint8List> deriveMasterKey(
     String masterPassword,
     Uint8List salt,
   ) async {
     // minimum configuration
     final argon2id = Argon2id(
-      parallelism: 1,
-      memory: 19 * 1024,
-      iterations: 2,
+      parallelism: 1, // hilos de procesamiento
+      memory: 19 * 1024, // 64 MB de RAM
+      iterations: 2, // número de pasadas — más alto = más lento y más seguro
       hashLength: 32,
     );
 
+    // Derivar la clave desde la contraseña y el salt
     final secretKey = await argon2id.deriveKeyFromPassword(
       password: masterPassword,
       nonce: salt,
     );
-    final masterKeyBytes = await secretKey.extractBytes();
 
-    // Hash de la masterKey para comparar
-    final algorithm = Sha256();
-    final masterKeyHash = await algorithm.hash(masterKeyBytes);
-
-    return Uint8List.fromList(masterKeyHash.bytes);
+    return Uint8List.fromList(await secretKey.extractBytes());
   }
 
-  //return Uint8List.fromList(base64Decode(keyBase64));
-
-  Future<Uint8List?> deriveSubkey({
+  /// Deriva subclaves independientes (por ejemplo, para cifrar la BD o entradas).
+  Future<Uint8List> deriveSubkey({
     required int subkeyId,
     required int subkeyLength,
     required String context,
@@ -45,5 +41,15 @@ class KeyService {
     );
 
     return Uint8List.fromList(await secretKey.extractBytes());
+  }
+
+  /// Calcula un hash SHA-256 de la master key.
+  /// Esto se usa como "verifier" para validar login sin guardar la master key.
+  Future<Uint8List> hashMasterKey(Uint8List masterKey) async {
+    // Hash de la masterKey para comparar
+    final algorithm = Sha256();
+    final hash = await algorithm.hash(masterKey);
+
+    return Uint8List.fromList(hash.bytes);
   }
 }

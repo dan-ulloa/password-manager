@@ -1,48 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:granatum/pages/signup_page.dart';
-import 'package:path/path.dart';
+import 'package:granatum/providers/vault_provider.dart';
+import 'package:granatum/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'services/key_service.dart';
 import 'services/crypto_service.dart';
 import 'repositories/password_repository.dart';
 import 'providers/database_provider.dart';
 import 'providers/auth_provider.dart';
-import 'providers/vault_provider.dart';
 import 'pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  /*
+
   final keyService = KeyService();
-  final cryptoService = CryptoService(keyService);
-  final dbProvider = DatabaseProvider(keyService);
-  */
+  final secureStorage = const FlutterSecureStorage();
+  final dbProvider = DatabaseProvider();
+  final cryptoService = new CryptoService();
+  final authService = AuthService(
+    keyService,
+    dbProvider,
+    cryptoService,
+    secureStorage,
+  );
+  final passwordRepository = new PasswordRepository(dbProvider);
+
   runApp(
     MultiProvider(
       providers: [
-        // Servicios pre-creados
-        Provider(create: (_) => KeyService()),
-        ProxyProvider<KeyService, DatabaseProvider>(
-          update: (_, keyService, __) => DatabaseProvider(keyService),
-        ),
-        /*ProxyProvider<KeyService, CryptoService>(
-          update: (_, keyService, cryptoService) => CryptoService(keyService),
-        ),
-        */
-        //Provider<CryptoService>.value(value: cryptoService),
-        //Provider<KeyService>.value(value: keyService),
-        //Provider<DatabaseProvider>.value(value: dbProvider),
-        /*
-        ProxyProvider<DatabaseProvider, PasswordRepository>(
-          update: (_, databaseProvider, __) =>
-              PasswordRepository(databaseProvider),
-        ),
-        ChangeNotifierProxyProvider2<PasswordRepository, CryptoService, VaultProvider>(
+        Provider<KeyService>.value(value: keyService),
+        Provider<FlutterSecureStorage>.value(value: secureStorage),
+        Provider<DatabaseProvider>.value(value: dbProvider),
+        Provider<AuthService>.value(value: authService),
+        Provider<PasswordRepository>.value(value: passwordRepository),
+        Provider<CryptoService>.value(value: cryptoService),
+        ChangeNotifierProvider(create: (_) => AuthProvider(authService)),
+        ChangeNotifierProxyProvider2<
+          PasswordRepository,
+          CryptoService,
+          VaultProvider
+        >(
           create: (_) => VaultProvider(),
-          update: (_, repo, crypto, provider) => provider!..setDependencies(repo, crypto),
+          update: (_, repo, crypto, provider) =>
+              provider!..setDependencies(repo, crypto),
         ),
-        */
-        // ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: const MyApp(),
     ),
@@ -52,30 +54,35 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  Future<bool> _checkIfRegistered(context) async {
-    final _dbProvider = Provider.of<DatabaseProvider>(context, listen: false);
-    // Queda pendiente validar con el AuthService que exista la salt id
-    return await _dbProvider.dbExists();
-  }
-
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+
     return MaterialApp(
       title: 'Password Manager',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: FutureBuilder<bool>(
-        future: _checkIfRegistered(context),
+      home: FutureBuilder<AuthInitState>(
+        future: authService.checkInitialState(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          /*
+
           if (snapshot.hasError) {
-            return ErrorPage(error: snapshot.error.toString());
+            return Placeholder(color: Colors.red);
+            //return ErrorPage(error: snapshot.error.toString());
           }
-          */
-          final registered = snapshot.data ?? false;
-          return registered ? LoginPage() : SignUpPage();
+
+          if (snapshot.data == AuthInitState.firstRun) {
+            return SignUpPage();
+          }
+
+          if (snapshot.data == AuthInitState.inconsistent) {
+            // Borra BD y secure storage,
+            return Placeholder(color: Colors.orange);
+          }
+
+          return LoginPage();
         },
       ),
     );

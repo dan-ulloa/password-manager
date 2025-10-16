@@ -1,108 +1,116 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import '../models/password_entry.dart';
 import '../repositories/password_repository.dart';
 import '../services/crypto_service.dart';
 
 class VaultProvider extends ChangeNotifier {
-  late PasswordRepository? _repo;
+  late PasswordRepository _repo;
   late CryptoService _cryptoService;
 
-  // Estado público
-  List<PasswordEntry> entries = [];
-  bool loading = false;
-  String? error;
-  
-  String? _revealedPassword;
-  int? _revealedId;
+  // Lista de entradas
+  List<PasswordEntry> _entries = [];
+  List<PasswordEntry> get entries => _entries;
 
+  // Estado de carga
+  bool _loading = false;
+  bool get loading => _loading;
+
+  // Contraseña revelada actualmente
+  String? _revealedPassword;
   String? get revealedPassword => _revealedPassword;
+
+  int? _revealedId;
   int? get revealedId => _revealedId;
 
-  VaultProvider();
+  String? error;
 
-  void setDependencies(PasswordRepository repo, CryptoService cryptoService) {
-    _cryptoService = cryptoService;
-    
-    // Solo inicializar una vez para evitar recargas innecesarias
-    final firstSet = _repo == null;
+  // Inyección de dependencias
+  void setDependencies(PasswordRepository repo, CryptoService crypto) {
     _repo = repo;
-    if (firstSet) {
-      loadEntries();
-    }
+    _cryptoService = crypto;
   }
 
   Future<void> loadEntries() async {
-    if (_repo == null) return;
-    loading = true;
-    error = null;
+    _loading = true;
     notifyListeners();
 
     try {
-      entries = await _repo!.getEntries();
-    } catch (e) {
-      error = 'Error cargando entradas: $e';
-      entries = [];
+      _entries = await _repo.getEntries();
     } finally {
-      loading = false;
+      _loading = false;
       notifyListeners();
     }
   }
 
-  Future<void> addEntry({
-    required String title,
-    required String username,
-    required String password,
-  }) async {
-    if (_repo == null) throw Exception('Repositorio no inicializado');
-
-    final encrypted = await _cryptoService.encrypt(password);
-
-    final newEntry = PasswordEntry(
+  Future<void> addEntry(String title, String username, String password) async {
+    final encryptedPassword = await _cryptoService.encrypt(password);
+    final entry = PasswordEntry(
       title: title,
       username: username,
-      password: encrypted,
+      password: encryptedPassword,
     );
 
-    loading = true;
+    await _repo.addEntry(entry);
+    _entries.add(entry);
     notifyListeners();
+  }
 
-    try {
-      await _repo!.addEntry(newEntry);
-      await loadEntries();
-    } catch (e) {
-      error = 'Error guardando entrada: $e';
-      loading = false;
-      notifyListeners();
-    }
+  Future<void> updateEntry(
+    PasswordEntry entry, {
+    String? title,
+    String? username,
+    String? password,
+  }) async {
+    final updatedEntry = PasswordEntry(
+      id: entry.id,
+      title: title ?? entry.title,
+      username: username ?? entry.username,
+      password: password != null
+          ? await _cryptoService.encrypt(password)
+          : entry.password,
+    );
+
+    //await _repo.updateEntry(updatedEntry);
+
+    final index = _entries.indexWhere((e) => e.id == entry.id);
+    if (index != -1) _entries[index] = updatedEntry;
+    notifyListeners();
   }
 
   Future<void> deleteEntry(int id) async {
-    if (_repo == null) return;
-    loading = true;
+    await _repo.deleteEntry(id);
+    _entries.removeWhere((e) => e.id == id);
     notifyListeners();
-    try {
-      await _repo!.deleteEntry(id);
-      entries.removeWhere((e) => e.id == id);
-    } catch (e) {
-      error = 'Error eliminando entrada: $e';
-    } finally {
-      loading = false;
-      notifyListeners();
-    }
+  }
+
+  Future<void> revealPassword(int id) async {
+    // Ocultar cualquier contraseña revelada previamente
+    _revealedPassword = null;
+    _revealedId = null;
+    notifyListeners();
+
+    final entry = await _repo.getEntryById(id);
+    final plain = await _cryptoService.decrypt(entry.password);
+
+    _revealedPassword = plain;
+    _revealedId = id;
+    notifyListeners();
   }
 
   /// Revelar una contraseña (solo una a la vez)
-  Future<void> revealPassword(int id) async {
+  Future<void> revealPassword2(Uint8List masterKey, int id) async {
     // Si ya hay otra revelada, la ocultamos
     _revealedPassword = null;
     _revealedId = null;
     notifyListeners();
-    
-    try{
+
+    try {
       // Buscamos la entrada
       final entry = await _repo!.getEntryById(id);
       final plain = await _cryptoService.decrypt(entry.password);
-      
+
       _revealedPassword = plain;
       _revealedId = id;
       notifyListeners();
@@ -115,13 +123,11 @@ class VaultProvider extends ChangeNotifier {
           notifyListeners();
         }
       });
-
     } catch (e) {
       _revealedPassword = null;
       _revealedId = null;
       notifyListeners();
 
-      error = 'Error al revelar contraseña: $e';
       debugPrint('Error al revelar contraseña: $e');
     }
   }
