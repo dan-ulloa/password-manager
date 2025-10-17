@@ -32,6 +32,19 @@ class AuthService {
     this._secureStorage,
   );
 
+  Future<void> _initBD(Uint8List masterKey) async {
+    // Generar subkey para la DB a partir de la Master Key
+    final dbKey = await _keyService.deriveSubkey(
+      subkeyId: 99,
+      subkeyLength: 32,
+      context: "DB_ENCRYPTION",
+      masterKey: masterKey,
+    );
+
+    // abrir la base de datos cifrada
+    await _dbProvider.initDB(dbKey);
+  }
+
   Future<void> signup(String masterPassword) async {
     final salt = Uint8List.fromList(randomBytes(16));
     final masterKey = await _keyService.deriveMasterKey(masterPassword, salt);
@@ -41,16 +54,7 @@ class AuthService {
     await _secureStorage.write(key: _saltId, value: base64Encode(salt));
     await _secureStorage.write(key: _verifierId, value: base64Encode(verifier));
 
-    // Generar subkey para la DB a partir de la Master Key
-    final dbKey = await _keyService.deriveSubkey(
-      subkeyId: 99,
-      subkeyLength: 32,
-      context: "DB_ENCRYPTION",
-      masterKey: masterKey,
-    );
-
-    // crea la base de datos cifrada
-    await _dbProvider.initDB(dbKey);
+    await _initBD(masterKey);
   }
 
   Future<void> login(String masterPassword) async {
@@ -70,16 +74,7 @@ class AuthService {
       throw Exception('Contraseña incorrecta');
     }
 
-    // Generar subkey para la DB a partir de la Master Key
-    final dbKey = await _keyService.deriveSubkey(
-      subkeyId: 99,
-      subkeyLength: 32,
-      context: "DB_ENCRYPTION",
-      masterKey: masterKey,
-    );
-
-    // abrir la base de datos cifrada
-    await _dbProvider.initDB(dbKey);
+    await _initBD(masterKey);
 
     final entrySubkey = await _keyService.deriveSubkey(
       subkeyId: 1,
