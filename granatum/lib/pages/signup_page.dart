@@ -12,7 +12,6 @@ class _SignUpPageState extends State<SignUpPage> {
 
   @override
   void dispose() {
-    // Clean up the controller when the widget is disposed.
     _passwordController.dispose();
     super.dispose();
   }
@@ -25,18 +24,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void _onPasswordChanged() {
     final text = _passwordController.text;
-    // Aquí validas en tiempo real:
-    // 1. Longitud mínima
-    // 2. Mayúsculas
-    // 3. Números
-    // 4. Símbolos
-    // Y actualizas un indicador visual.
     print(text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.read<AuthProvider>();
+    final auth = context.watch<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Bienvenido a Granatum")),

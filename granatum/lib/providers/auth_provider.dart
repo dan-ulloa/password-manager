@@ -19,13 +19,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> signup(String password) async {
+  Future<void> signup(String password) async {
     try {
       await _authService.signup(password);
-      _authenticated = false;
-      return true;
+      _authenticated = true;
     } on Exception catch (e) {
-      return false;
+      _authenticated = false;
     } finally {
       notifyListeners();
     }

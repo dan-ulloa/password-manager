@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+import 'package:granatum/pages/home_page.dart';
 import 'package:granatum/pages/signup_page.dart';
 import 'package:granatum/providers/vault_provider.dart';
 import 'package:granatum/services/auth_service.dart';
@@ -51,40 +53,24 @@ void main() async {
   );
 }
 
+/// The route configuration.
+final GoRouter _router = GoRouter(
+  routes: [
+    GoRoute(path: '/', builder: (_, __) => const HomePage()),
+    GoRoute(path: '/login', builder: (_, __) => LoginPage()),
+    GoRoute(path: '/signup', builder: (_, __) => SignUpPage()),
+  ],
+);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Password Manager',
+      routerConfig: _router,
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: FutureBuilder<AuthInitState>(
-        future: authService.checkInitialState(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Placeholder(color: Colors.red);
-            //return ErrorPage(error: snapshot.error.toString());
-          }
-
-          if (snapshot.data == AuthInitState.firstRun) {
-            return SignUpPage();
-          }
-
-          if (snapshot.data == AuthInitState.inconsistent) {
-            // Borra BD y secure storage,
-            return Placeholder(color: Colors.orange);
-          }
-
-          return LoginPage();
-        },
-      ),
     );
   }
 }
