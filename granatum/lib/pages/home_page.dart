@@ -31,7 +31,6 @@ class HomePage extends StatelessWidget {
           // Borra BD y secure storage,
           return Placeholder(color: Colors.orange);
         }
-
         return LoginPage();
       },
     );

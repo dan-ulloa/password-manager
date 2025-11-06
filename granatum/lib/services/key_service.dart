@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
+import "package:unorm_dart/unorm_dart.dart" as unorm;
 
 class KeyService {
   /// Deriva la master key a partir de la contraseña del usuario y un salt único.
@@ -18,9 +19,12 @@ class KeyService {
       hashLength: 32,
     );
 
+    // Normalizar la clave
+    final normalized = normalizePassword(masterPassword);
+
     // Derivar la clave desde la contraseña y el salt
     final secretKey = await argon2id.deriveKeyFromPassword(
-      password: masterPassword,
+      password: normalized,
       nonce: salt,
     );
 
@@ -51,5 +55,10 @@ class KeyService {
     final hash = await algorithm.hash(masterKey);
 
     return Uint8List.fromList(hash.bytes);
+  }
+
+  String normalizePassword(String password) {
+    final normalized = unorm.nfc(password);
+    return normalized;
   }
 }

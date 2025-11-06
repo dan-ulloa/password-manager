@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:granatum/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:zxcvbn/zxcvbn.dart';
 
 class SignUpPage extends StatefulWidget {
   @override
@@ -9,6 +13,7 @@ class SignUpPage extends StatefulWidget {
 
 class _SignUpPageState extends State<SignUpPage> {
   final _passwordController = TextEditingController();
+  final _passwordConfirmationController = TextEditingController();
 
   @override
   void dispose() {
@@ -20,16 +25,42 @@ class _SignUpPageState extends State<SignUpPage> {
   void initState() {
     super.initState();
     _passwordController.addListener(_onPasswordChanged);
+    _passwordConfirmationController.addListener(_onConfirmationChanged);
+
+    final auth = context.read<AuthProvider>();
+    auth.addListener(() {
+      if (auth.authenticated) {
+        context.go('/login');
+      }
+      if (auth.error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(auth.error!)));
+      }
+    });
   }
 
   void _onPasswordChanged() {
     final text = _passwordController.text;
-    print(text);
+    if (text.isNotEmpty) {
+      final passwordStrength = Zxcvbn().evaluate(text);
+
+      print(text);
+      print(passwordStrength.score);
+    }
+  }
+
+  void _onConfirmationChanged() {
+    if (_passwordController.text == _passwordConfirmationController.text) {
+      print("SON IGUALES");
+    } else {
+      print("NO SON IGUALES");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = context.read<AuthProvider>();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Bienvenido a Granatum")),
@@ -45,11 +76,28 @@ class _SignUpPageState extends State<SignUpPage> {
               obscureText: true,
               decoration: const InputDecoration(labelText: "Llave maestra"),
             ),
+            TextField(
+              controller: _passwordConfirmationController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: "Confirmar llave maestra",
+              ),
+            ),
+            Column(
+              children: [
+                Text("La llave debe contener"),
+                Text("Al menos 12 caracteres"),
+                Text("Al menos una mayúscula"),
+                Text("Al menos una minúscula"),
+                Text("Al menos un número"),
+                Text("Al menos uno símbolo"),
+              ],
+            ),
             ElevatedButton(
               child: const Text("Crear llave maestra"),
               onPressed: () async {
                 // Se vuelve a validar ya completa
-                //await authProvider.signup(_passwordController.text);
+                //await auth.signup(_passwordController.text);
               },
             ),
           ],

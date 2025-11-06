@@ -3,8 +3,12 @@ import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
+
+  String? _error;
   bool _authenticated = false;
+
   bool get authenticated => _authenticated;
+  String? get error => _error;
 
   AuthProvider(this._authService);
 
@@ -14,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
       _authenticated = true;
     } on Exception catch (e) {
       _authenticated = false;
+      _error = e.toString();
     } finally {
       notifyListeners();
     }
@@ -25,6 +30,7 @@ class AuthProvider extends ChangeNotifier {
       _authenticated = true;
     } on Exception catch (e) {
       _authenticated = false;
+      _error = e.toString();
     } finally {
       notifyListeners();
     }

@@ -112,14 +112,14 @@ class AuthService {
 
   Future<AuthInitState> checkInitialState() async {
     final dbExists = await _dbProvider.dbExists();
-    final storedSalt = await _secureStorage.read(key: _saltId);
-    final storedVerifier = await _secureStorage.read(key: _verifierId);
+    final saltB64 = await _secureStorage.read(key: _saltId);
+    final verifierB64 = await _secureStorage.read(key: _verifierId);
 
-    if (!dbExists && storedSalt == null && storedVerifier == null) {
+    if (!dbExists && saltB64 == null && verifierB64 == null) {
       return AuthInitState.firstRun;
     }
 
-    if (dbExists && storedSalt != null && storedVerifier != null) {
+    if (dbExists && saltB64 != null && verifierB64 != null) {
       return AuthInitState.needsLogin;
     }
 
