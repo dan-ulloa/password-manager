@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:granatum/pages/home_page.dart';
-import 'package:granatum/pages/signup_page.dart';
-import 'package:granatum/providers/vault_provider.dart';
-import 'package:granatum/services/auth_service.dart';
+import 'package:granatum/old/pages/home_page.dart';
+import 'package:granatum/old/pages/signup_page.dart';
+import 'package:granatum/old/providers/vault_provider.dart';
+import 'package:granatum/old/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'services/key_service.dart';
-import 'services/crypto_service.dart';
-import 'repositories/password_repository.dart';
-import 'providers/database_provider.dart';
-import 'providers/auth_provider.dart';
-import 'pages/login_page.dart';
+import 'old/services/key_service.dart';
+import 'old/services/crypto_service.dart';
+import 'old/repositories/password_repository.dart';
+import 'old/providers/database_provider.dart';
+import 'old/providers/auth_provider.dart';
+import 'old/pages/login_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

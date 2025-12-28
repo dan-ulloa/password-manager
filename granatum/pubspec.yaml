@@ -44,7 +44,7 @@ dependencies:
   # Almacenamiento seguro para claves (salt, etc.)
   flutter_secure_storage: ^9.0.0
 
-  #
+  # Normalizar master password
   unorm_dart: ^0.3.2
 
   # Password strength estimator developed by DropBox

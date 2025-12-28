@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:granatum/providers/database_provider.dart';
+import 'package:granatum/old/providers/database_provider.dart';
 import '../models/password_entry.dart';
 
 class PasswordRepository {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:granatum/pages/login_page.dart';
-import 'package:granatum/pages/signup_page.dart';
-import 'package:granatum/services/auth_service.dart';
+import 'package:granatum/old/pages/login_page.dart';
+import 'package:granatum/old/pages/signup_page.dart';
+import 'package:granatum/old/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatelessWidget {
